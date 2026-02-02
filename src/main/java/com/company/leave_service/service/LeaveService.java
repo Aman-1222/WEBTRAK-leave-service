@@ -14,11 +14,20 @@ import java.util.List;
 public class LeaveService {
 
     private final LeaveRepository repository;
+    private final LeaveNotificationProducer notificationProducer;
 
     public LeaveRequest applyLeave(LeaveRequest request, String email) {
         request.setEmployeeEmail(email);
         request.setStatus(LeaveStatus.PENDING);
-        return repository.save(request);
+        LeaveRequest saved = repository.save(request);
+
+        notificationProducer.send(
+                "Leave Applied | Employee: " + email +
+                        " | From: " + request.getStartDate() +
+                        " | To: " + request.getEndDate()
+        );
+
+        return saved;
     }
 
     public List<LeaveRequest> getMyLeaves(String email) {
@@ -33,13 +42,25 @@ public class LeaveService {
         LeaveRequest leave = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.APPROVED);
-        return repository.save(leave);
+        LeaveRequest saved = repository.save(leave);
+
+        notificationProducer.send(
+                "Leave APPROVED | Employee: " + leave.getEmployeeEmail()
+        );
+
+        return saved;
     }
 
     public LeaveRequest reject(Long id) {
         LeaveRequest leave = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.REJECTED);
-        return repository.save(leave);
+        LeaveRequest saved = repository.save(leave);
+
+        notificationProducer.send(
+                "Leave REJECTED | Employee: " + leave.getEmployeeEmail()
+        );
+
+        return saved;
     }
 }
